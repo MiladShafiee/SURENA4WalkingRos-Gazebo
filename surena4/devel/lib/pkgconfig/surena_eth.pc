@@ -1,0 +1,8 @@
+prefix=/home/milad/software/humanoid/surena4/devel
+
+Name: surena_eth
+Description: Description of surena_eth
+Version: 0.1.0
+Cflags: -I/home/milad/software/humanoid/surena4/devel/include
+Libs: -L/home/milad/software/humanoid/surena4/devel/lib 
+Requires: 

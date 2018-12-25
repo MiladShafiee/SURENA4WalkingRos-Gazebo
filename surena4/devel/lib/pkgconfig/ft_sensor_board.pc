@@ -1,0 +1,8 @@
+prefix=/home/milad/software/humanoid/surena4/devel
+
+Name: ft_sensor_board
+Description: Description of ft_sensor_board
+Version: 0.1.0
+Cflags: 
+Libs: -L/home/milad/software/humanoid/surena4/devel/lib 
+Requires: 

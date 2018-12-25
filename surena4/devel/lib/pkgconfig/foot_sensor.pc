@@ -1,0 +1,8 @@
+prefix=/home/milad/software/humanoid/surena4/devel
+
+Name: foot_sensor
+Description: Description of foot_sensor
+Version: 0.1.0
+Cflags: 
+Libs: -L/home/milad/software/humanoid/surena4/devel/lib 
+Requires: 

@@ -1,0 +1,8 @@
+prefix=/home/milad/software/humanoid/surena4/install
+
+Name: robot_sim
+Description: Description of robot_sim
+Version: 0.1.0
+Cflags: 
+Libs: -L/home/milad/software/humanoid/surena4/install/lib 
+Requires: 

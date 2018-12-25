@@ -1,0 +1,8 @@
+prefix=/home/milad/software/humanoid/surena4/devel
+
+Name: xsens_driver
+Description: Description of xsens_driver
+Version: 4.0.2
+Cflags: 
+Libs: -L/home/milad/software/humanoid/surena4/devel/lib 
+Requires: rospy std_msgs tf sensor_msgs geometry_msgs gps_common diagnostic_msgs xsens_msgs

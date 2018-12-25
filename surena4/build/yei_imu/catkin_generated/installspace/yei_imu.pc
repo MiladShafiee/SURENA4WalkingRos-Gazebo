@@ -1,0 +1,8 @@
+prefix=/home/milad/software/humanoid/surena4/install
+
+Name: yei_imu
+Description: Description of yei_imu
+Version: 0.1.0
+Cflags: 
+Libs: -L/home/milad/software/humanoid/surena4/install/lib 
+Requires: 

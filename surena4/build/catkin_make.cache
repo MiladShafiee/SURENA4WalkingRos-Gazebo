@@ -1,0 +1,2 @@
+foot_sensor:ft_sensor_board:gui:offlinePublisher:robot_sim:surena_eth:surena_usb:trajectory_generation:xsens_driver:xsens_msgs:yei_imu
+-G CodeBlocks - Unix Makefiles -DCMAKE_BUILD_TYPE=Release -DCATKIN_DEVEL_PREFIX=/home/milad/software/humanoid/surena4/devel -DCMAKE_INSTALL_PREFIX=/home/milad/software/humanoid/surena4/install

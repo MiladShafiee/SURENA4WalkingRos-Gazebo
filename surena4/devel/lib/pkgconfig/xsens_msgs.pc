@@ -1,0 +1,8 @@
+prefix=/home/milad/software/humanoid/surena4/devel
+
+Name: xsens_msgs
+Description: Description of xsens_msgs
+Version: 2.0.2
+Cflags: -I/home/milad/software/humanoid/surena4/devel/include
+Libs: -L/home/milad/software/humanoid/surena4/devel/lib 
+Requires: rospy roscpp std_msgs sensor_msgs message_generation message_runtime
