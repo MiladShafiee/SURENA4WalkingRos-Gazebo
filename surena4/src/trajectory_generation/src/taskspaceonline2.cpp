@@ -13,8 +13,12 @@ TaskSpaceOnline2::TaskSpaceOnline2()
     CoeffArrayAnkle();
     CoeffArrayPelvis();
 
-     kbumpL=0;
-      kbumpR=0;
+    OldPelvisZ=ReferencePelvisHeight;
+    NewPlevisZ=ReferencePelvisHeight;
+    kbumpL=0;
+    currentRightFootZ=_lenghtOfAnkle;
+    currentLeftFootZ=_lenghtOfAnkle;
+    kbumpR=0;
 
     localtimingInteger=0;
     bool _walkstate=true;
@@ -22,14 +26,14 @@ TaskSpaceOnline2::TaskSpaceOnline2()
 }
 
 void TaskSpaceOnline2::SetParameters(){
-    YOffsetOfAnkletrajectory=0.06;//for compensating the clearance of the hip roll in experiment
+    YOffsetOfAnkletrajectory=0.000;//for compensating the clearance of the hip roll in experiment
+    RightHipRollModification=5;//degree;
+    LeftHipRollModification=4;//degree
 
     toeOff=true;
     HipRollModification=true;
 
 
-    HeelLandingAnglePitch=8*0;
-    ToeOffAnglePitch=-6*0;
     Sc=0.3783;
     Rse=0.7364;
     Rd=0.5555;
@@ -45,10 +49,10 @@ void TaskSpaceOnline2::SetParameters(){
     _pelvisLength=0.23;
     ReferencePelvisHeight=0.86;
 
-    NStride=2;
-    NStep=4;
+    NStride=1;
+    NStep=2;
     DesiredVelocity=0.10000;
-    StepLength=0.1120000;
+    StepLength=0.0840000;
     StepNumber=1;
 
 
@@ -59,31 +63,33 @@ void TaskSpaceOnline2::SetParameters(){
 
     Tc=StepLength*3.6/DesiredVelocity;
 
-    TStart=6;
-    TEnd=6;
+    TStart=6;//time of first step
+    TEnd=6;//time of last step
     TDs=.4*Tc; // Duration of double support phase
-    T_beta=TDs/2;
+    //  T_beta=TDs/2;
     TSS=Tc-TDs; // Duration of single support phase
     TGait=TStart+NStride*2*Tc;
 
     XofAnkleMaximumHeight=(0.22/0.35)*StepLength; // Position of ankle in x direction when it reaches maximum heigth
     za_c=0.07;
     AnkleMaximumHeight=za_c; // maximum height of ankle
-    za_st_m=AnkleMaximumHeight;
+    //    za_st_m=AnkleMaximumHeight;
 
-    xa_st_m=(0.22/0.35)*StepLength/2;
-    za_st_m=(AnkleMaximumHeight);
-    xa_end_m=2*NStride*StepLength+(0.22/0.35)*StepLength/2;
-    za_end_m=(AnkleMaximumHeight);
+    //    xa_st_m=(0.22/0.35)*StepLength/2;
+    //    za_st_m=(AnkleMaximumHeight);
+    //    xa_end_m=2*NStride*StepLength+(0.22/0.35)*StepLength/2;
+    //    za_end_m=(AnkleMaximumHeight);
 
+
+    ///these parameters should be tuned
     Xe=0.5*Sc*StepLength/(Rse+1);
     Xs=3.0*Rse*Xe;
-    Xe=0.001;
+    Xe=0.0001;
 
-    YpMax=1*Rm*0.5*_pelvisLength;
+    YpMax=1.1*Rm*0.5*_pelvisLength;
     Yd=1*Rd*YpMax;
-    YStMax=1.0*YpMax;
-    YEndMax=1.0*YpMax;
+    YStMax=1.0/1.1*YpMax;
+    YEndMax=1.0/1.1*YpMax;
     cout<<" Xe="<<Xe<<" Xs="<< Xs <<" YpMax="<<YpMax<<" Yd="<<Yd<<" YStMax="<<YStMax<<" YEndMax="<<YEndMax<<endl;
 
     MotionTime=TStart+NStride*2*Tc+TDs+TEnd;
@@ -113,6 +119,203 @@ void TaskSpaceOnline2::SetParameters(){
 
 }
 
+
+
+
+
+
+MatrixXd TaskSpaceOnline2::RollAngleModification(double time, int n, double localtiming,bool LastDSIndex){
+    double N;
+    double t;
+    double rollR=0;
+    double rollL=0;
+
+    if (time<=TStart||time>TGait){
+        N=0;
+        t=time;
+    }
+    else if (time>TStart && time<TGait){
+        N=floor((time-TStart)/(2*Tc));
+        t=fmod((time-TStart),2*Tc)+TStart;
+    }
+    else if (time==TGait){
+        N=NStride;
+        t=0;
+    }
+
+
+    double R_1=0.6;
+    double  D_time=R_1*TDs;
+    double D_teta_r=-1*RightHipRollModification*(M_PI/180);
+    double D_teta_l=LeftHipRollModification*(M_PI/180);
+
+    if (t<=T_st_p_sx){
+        D_time=T_st_p_sx-T_st_p_sy;
+        MatrixXd Ct_roll_st(1,2);
+        Ct_roll_st<<0 ,D_time;
+        MatrixXd Cp_roll_st(1,2);
+        Cp_roll_st<<0, D_teta_r;
+        MatrixXd Cv_roll_st(1,2);
+        Cv_roll_st<<0 ,0;
+        MatrixXd Ca_roll_st(1,2);
+        Ca_roll_st<<0 ,0;
+        MatrixXd C_roll_st=CoefOffline.Coefficient(Ct_roll_st,Cp_roll_st,Cv_roll_st,Ca_roll_st);
+
+        if (t>(T_st_p_sx-D_time) && t<=T_st_p_sx){
+            MatrixXd output=GetAccVelPos(C_roll_st,t-(T_st_p_sx-D_time),0,5);
+            rollR=output(0,0);
+            rollL=0;
+        }
+
+    }
+    else if (t>T_st_p_sx  && t<=TStart){
+        rollR=D_teta_r;
+        rollL=0;
+
+    }
+    else if (t>TStart &&  t<=(TDs+TStart)){
+
+
+        rollR=D_teta_r;
+        rollL=0;
+
+        MatrixXd Ct_rollR_ds1(1,2);
+        Ct_rollR_ds1<<0 ,D_time;
+        MatrixXd Cp_rollR_ds1(1,2);
+        Cp_rollR_ds1<<0, D_teta_r;
+        MatrixXd Cv_rollR_ds1(1,2);
+        Cv_rollR_ds1<<0 ,0;
+        MatrixXd Ca_rollR_ds1(1,2);
+        Ca_rollR_ds1<<0 ,0;
+        MatrixXd C_rollR_ds1=CoefOffline.Coefficient(Ct_rollR_ds1,Cp_rollR_ds1,Cv_rollR_ds1,Ca_rollR_ds1);
+
+
+        MatrixXd Ct_rollL_ds1(1,2);
+        Ct_rollL_ds1<<0 ,D_time;
+        MatrixXd Cp_rollL_ds1(1,2);
+        Cp_rollL_ds1<<0, D_teta_l;
+        MatrixXd Cv_rollL_ds1(1,2);
+        Cv_rollL_ds1<<0 ,0;
+        MatrixXd Ca_rollL_ds1(1,2);
+        Ca_rollL_ds1<<0 ,0;
+        MatrixXd C_rollL_ds1=CoefOffline.Coefficient(Ct_rollL_ds1,Cp_rollL_ds1,Cv_rollL_ds1,Ca_rollL_ds1);
+
+
+        if (t>(TDs+TStart-D_time) && t<=(TDs+TStart)){
+            MatrixXd outputl=GetAccVelPos(C_rollL_ds1,t-(TDs+TStart-D_time),0,5);
+            rollL=rollL+outputl(0,0);
+
+            MatrixXd outputR=GetAccVelPos(C_rollR_ds1,t-(TDs+TStart-D_time),0,5);
+            rollR=rollR-outputR(0,0);
+        }
+
+
+    }
+    else if (t>(TDs+TStart) && t<=(Tc+TStart)){
+        rollR=0;
+        rollL=D_teta_l;
+    }
+    else if (t>(Tc+TStart) && t<=(Tc+TDs+TStart)){
+
+        rollR=0;
+        rollL=D_teta_l;
+
+        MatrixXd Ct_rollR_ds1(1,2);
+        Ct_rollR_ds1<<0 ,D_time;
+        MatrixXd Cp_rollR_ds1(1,2);
+        Cp_rollR_ds1<<0, D_teta_r;
+        MatrixXd Cv_rollR_ds1(1,2);
+        Cv_rollR_ds1<<0 ,0;
+        MatrixXd Ca_rollR_ds1(1,2);
+        Ca_rollR_ds1<<0 ,0;
+        MatrixXd C_rollR_ds1=CoefOffline.Coefficient(Ct_rollR_ds1,Cp_rollR_ds1,Cv_rollR_ds1,Ca_rollR_ds1);
+
+
+        MatrixXd Ct_rollL_ds1(1,2);
+        Ct_rollL_ds1<<0 ,D_time;
+        MatrixXd Cp_rollL_ds1(1,2);
+        Cp_rollL_ds1<<0, D_teta_l;
+        MatrixXd Cv_rollL_ds1(1,2);
+        Cv_rollL_ds1<<0 ,0;
+        MatrixXd Ca_rollL_ds1(1,2);
+        Ca_rollL_ds1<<0 ,0;
+        MatrixXd C_rollL_ds1=CoefOffline.Coefficient(Ct_rollL_ds1,Cp_rollL_ds1,Cv_rollL_ds1,Ca_rollL_ds1);
+
+
+        if (t>(Tc+TDs+TStart-D_time) && t<=(Tc+TDs+TStart)){
+            MatrixXd outputl=GetAccVelPos(C_rollL_ds1,t-(Tc+TDs+TStart-D_time),0,5);
+            rollL=rollL-outputl(0,0);
+
+            MatrixXd outputR=GetAccVelPos(C_rollR_ds1,t-(Tc+TDs+TStart-D_time),0,5);
+            rollR=rollR+outputR(0,0);
+        }
+    }
+    else if (t>(Tc+TDs+TStart) && t<=(2*Tc+TStart)){
+        rollR=D_teta_r;
+        rollL=0;
+    }
+    else if (t>=TGait && t<(TGait+TDs)){
+        rollR=D_teta_r;
+        rollL=0;
+
+        MatrixXd Ct_rollR_ds1(1,2);
+        Ct_rollR_ds1<<0 ,D_time;
+        MatrixXd Cp_rollR_ds1(1,2);
+        Cp_rollR_ds1<<0, D_teta_r;
+        MatrixXd Cv_rollR_ds1(1,2);
+        Cv_rollR_ds1<<0 ,0;
+        MatrixXd Ca_rollR_ds1(1,2);
+        Ca_rollR_ds1<<0 ,0;
+        MatrixXd C_rollR_ds1=CoefOffline.Coefficient(Ct_rollR_ds1,Cp_rollR_ds1,Cv_rollR_ds1,Ca_rollR_ds1);
+
+
+        MatrixXd Ct_rollL_ds1(1,2);
+        Ct_rollL_ds1<<0 ,D_time;
+        MatrixXd Cp_rollL_ds1(1,2);
+        Cp_rollL_ds1<<0, D_teta_l;
+        MatrixXd Cv_rollL_ds1(1,2);
+        Cv_rollL_ds1<<0 ,0;
+        MatrixXd Ca_rollL_ds1(1,2);
+        Ca_rollL_ds1<<0 ,0;
+        MatrixXd C_rollL_ds1=CoefOffline.Coefficient(Ct_rollL_ds1,Cp_rollL_ds1,Cv_rollL_ds1,Ca_rollL_ds1);
+
+
+        if (t>(TGait+TDs-D_time) && t<=(TGait+TDs)){
+            MatrixXd outputl=GetAccVelPos(C_rollL_ds1,t-(TDs+TGait-D_time),0,5);
+            rollL=rollL+outputl(0,0);
+
+            MatrixXd outputR=GetAccVelPos(C_rollR_ds1,t-(TDs+TGait-D_time),0,5);
+            rollR=rollR-outputR(0,0);
+        }
+    }
+    else if (t>=(TGait+TDs) && t<T_end_p_sx){
+        rollR=0;
+        rollL=D_teta_l;
+    }
+    else if (t>=T_end_p_sx  && t<=(TGait+TDs+TEnd)){
+        D_time=(T_end_p_ey-T_end_p_sx);
+        MatrixXd Ct_roll_st(1,2);
+        Ct_roll_st<<-1*D_time ,0;
+        MatrixXd Cp_roll_st(1,2);
+        Cp_roll_st<<D_teta_l, 0;
+        MatrixXd Cv_roll_st(1,2);
+        Cv_roll_st<<0 ,0;
+        MatrixXd Ca_roll_st(1,2);
+        Ca_roll_st<<0 ,0;
+        MatrixXd C_roll_st=CoefOffline.Coefficient(Ct_roll_st,Cp_roll_st,Cv_roll_st,Ca_roll_st);
+
+        if (t>(T_end_p_sx) && t<=T_end_p_sx+D_time){
+            MatrixXd output=GetAccVelPos(C_roll_st,t-(T_end_p_sx+1*D_time),-1*D_time,5);
+            rollL=output(0,0);
+            rollR=0;
+        }
+
+
+    }
+MatrixXd RollMat(2,1);
+RollMat<<rollR,rollL;
+return RollMat;
+}
 
 
 void TaskSpaceOnline2::CoeffArrayPelvis(){
@@ -223,6 +426,19 @@ void TaskSpaceOnline2::CoeffArrayPelvis(){
     MatrixXd Cy_end_peAccel(1,2);
     Cy_end_peAccel<<0 ,0;
     Cy_end_pb=CoefOffline.Coefficient(Cy_end_peTime,Cy_end_pePos,Cy_end_peVel,Cy_end_peAccel);
+
+
+    //    //----------------Coefficient of modification of Pelvis motion in z direction---------------------
+    //    MatrixXd Cz_mod_pTime(1,2);
+    //    Cz_mod_pTime<<0 ,TSS;
+    //    MatrixXd Cz_mod_pPos(1,2);
+    //    Cz_mod_pPos<<OldPelvisZ, NewPlevisZ;
+    //    MatrixXd Cz_mod_pVel(1,2);
+    //    Cz_mod_pVel<<0 ,0;
+    //    MatrixXd Cz_mod_pAccel(1,2);
+    //    Cz_mod_pAccel<<0 ,0;
+    //    Cz_mod_p=CoefOffline.Coefficient(Cz_mod_pTime,Cz_mod_pPos,Cz_mod_pVel,Cx_mod_pAccel);
+
 
 }
 
@@ -653,6 +869,83 @@ MatrixXd TaskSpaceOnline2::PelvisTrajectory(double time, int n, double localtimi
 }
 
 
+void TaskSpaceOnline2::CoeffArrayPelvisZMod(){
+
+    //----------------Coefficient of modification of Pelvis motion in z direction---------------------
+    MatrixXd Cz_mod_pTime(1,2);
+    Cz_mod_pTime<<0 ,TSS;
+    MatrixXd Cz_mod_pPos(1,2);
+    Cz_mod_pPos<<OldPelvisZ, NewPlevisZ;
+    MatrixXd Cz_mod_pVel(1,2);
+    Cz_mod_pVel<<0 ,0;
+    MatrixXd Cz_mod_pAccel(1,2);
+    Cz_mod_pAccel<<0 ,0;
+    Cz_mod_p=CoefOffline.Coefficient(Cz_mod_pTime,Cz_mod_pPos,Cz_mod_pVel,Cz_mod_pAccel);
+
+
+    MatrixXd Cz_mod_st_pTime(1,2);
+    Cz_mod_st_pTime<<0 ,TSS;
+    MatrixXd Cz_mod_st_pPos(1,2);
+    Cz_mod_st_pPos<<OldPelvisZ, OldPelvisZ;
+    MatrixXd Cz_mod_st_pVel(1,2);
+    Cz_mod_st_pVel<<0 ,0;
+    MatrixXd Cz_mod_st_pAccel(1,2);
+    Cz_mod_st_pAccel<<0 ,0;
+    Cz_mod_st_p=CoefOffline.Coefficient(Cz_mod_st_pTime,Cz_mod_st_pPos,Cz_mod_st_pVel,Cz_mod_st_pAccel);
+}
+
+MatrixXd TaskSpaceOnline2::ModificationOfPelvisHeight(double time,int n, double localtiming,bool RFT_state,bool LFT_state,bool LastDSIndex){
+
+    double dzp;
+    double zp;
+    double ddzp;
+
+    if(n==1){
+        zp=OldPelvisZ;
+        dzp=0;
+        ddzp=0;
+
+    }
+    else if (n!=1 && n!=(NStep+2)) {
+
+        if (localtiming>=0.000 && localtiming<TDs){
+            zp=OldPelvisZ;
+            dzp=0;
+            ddzp=0;
+        }
+        if (localtiming>=TDs && localtiming<=Tc){
+
+            if (localtiming>=TDs && localtiming<=(TDs+0.006)) {
+                OldPelvisZ=NewPlevisZ;
+            }
+
+            MatrixXd outputz=GetAccVelPos(Cz_mod_p.row(0),localtiming-TDs,0,5);
+            zp=outputz(0,0);
+            dzp=outputz(0,1);
+            ddzp=outputz(0,2);
+        }
+    }
+    else if( n==(NStep+2)){
+        zp=OldPelvisZ;
+        dzp=0;
+        ddzp=0;
+    }
+
+
+
+
+
+    MatrixXd pelvisz(3,1);
+    pelvisz<<zp,dzp,ddzp;
+    return pelvisz;
+}
+
+
+
+
+
+
+
 
 
 
@@ -778,6 +1071,9 @@ void TaskSpaceOnline2::CoeffArrayAnkle(){
 }
 
 
+
+
+
 MatrixXd TaskSpaceOnline2::AnkleTrajectory(double time,int n, double localtiming,bool RFT_state,bool LFT_state,bool LastDSIndex){
 
     double y_ar=-0.5*_pelvisLength;
@@ -799,6 +1095,15 @@ MatrixXd TaskSpaceOnline2::AnkleTrajectory(double time,int n, double localtiming
 
 
     if (n==1){//left foot moves in first step
+        firstStep=true;
+        LeftSS=false;
+        RightSS=false;
+
+        Leftmoves=true;
+        Rightmoves=false;
+
+        LeftSupport=true;
+        RightSupport=true;
 
         x_ar=0;
         z_ar=_lenghtOfAnkle;
@@ -809,21 +1114,18 @@ MatrixXd TaskSpaceOnline2::AnkleTrajectory(double time,int n, double localtiming
         if (localtiming>=T_s_st){
             MatrixXd output=GetAccVelPos(C_st_x_al.row(0),localtiming,T_s_st,5);
             x_al=(LFT_state==false)*output(0,0)+(LFT_state==true)*currentLeftFootX2;
+            firstStep=true;
 
 
             if ((localtiming>=(TStart-T_s_st/2))  && localtiming<=((TStart-T_s_st/2)+0.01) ) {
                 kbumpL=1;
-
             }
 
 
-
             if ( kbumpL==1){
-            kbumpL=kbumpL+1;
-
-            LeftSupport=false;
-            LeftFootOrientationAdaptator=true;
-
+                kbumpL=kbumpL+1;
+                LeftSensorActive=false;
+                LeftFootOrientationAdaptator=true;
             }
 
 
@@ -835,7 +1137,8 @@ MatrixXd TaskSpaceOnline2::AnkleTrajectory(double time,int n, double localtiming
 
                 MatrixXd output1=GetAccVelPos(C_st_y_al.row(0),time,T_s_st,5);
                 y_al=0.5*_pelvisLength+output1(0,0);
-
+                LeftSupport=false;
+                LeftSS=true;
             }
             else{
                 MatrixXd output=GetAccVelPos(C_st_z_al.row(1),localtiming,TStart-T_s_st/2,5);
@@ -843,7 +1146,8 @@ MatrixXd TaskSpaceOnline2::AnkleTrajectory(double time,int n, double localtiming
 
                 MatrixXd output2=GetAccVelPos(C_st_y_al.row(1),time,TStart-T_s_st/2,5);
                 y_al=(LFT_state==false)*(0.5*_pelvisLength+output2(0,0))+(LFT_state==true)*currentLeftFootY2;
-
+                LeftSupport=false;
+                LeftSS=true;
             }
         }
     }
@@ -852,10 +1156,28 @@ MatrixXd TaskSpaceOnline2::AnkleTrajectory(double time,int n, double localtiming
 
         n=n-1;
         //cout<<"localtime"<<localtiming<<endl;
-         footIndex=fmod(n,2);// shows which foot is swing foot (in cyclic mode left foots is swinging in the even steps(N))
+        footIndex=fmod(n,2);// shows which foot is swing foot (in cyclic mode left foots is swinging in the even steps(N))
         //it means whenever the footIndex is 0 the left foots will go to the swing mode
 
         if (localtiming<TDs){// double support of cyclic walking
+
+            if (footIndex==0) {
+                Leftmoves=true;
+                Rightmoves=false;
+                LeftSupport=true;
+                RightSupport=true;
+                LeftSS=false;
+                RightSS=false;
+            }
+            else {
+                Leftmoves=false;
+                Rightmoves=true;
+                LeftSupport=true;
+                RightSupport=true;
+                LeftSS=false;
+                RightSS=false;
+            }
+
 
             x_al=currentLeftFootX2;
             y_al=currentLeftFootY2;
@@ -869,31 +1191,45 @@ MatrixXd TaskSpaceOnline2::AnkleTrajectory(double time,int n, double localtiming
 
         else if (localtiming<Tc){//single support of cyclic walking
 
+            if (firstStep==true) {
+                firstStep=false;
+            }
+
+            if (footIndex==0) {
+                Leftmoves=true;
+                Rightmoves=false;
+                LeftSupport=false;
+                RightSupport=true;
+                LeftSS=true;
+                RightSS=false;
+            }
+            else {
+                Leftmoves=false;
+                Rightmoves=true;
+                LeftSupport=true;
+                RightSupport=false;
+                LeftSS=false;
+                RightSS=true;
+            }
 
             if (localtiming>(TDs+0.700)  && localtiming<(TDs+0.710) && footIndex==0) {
                 kbumpL=1;
-
             }
 
             if (localtiming>(TDs+0.50)  && localtiming<(TDs+0.510) && footIndex!=0) {
                 kbumpR=1;
-
             }
 
             if (footIndex==0 && kbumpL==1){
-            kbumpL=kbumpL+1;
-
-            LeftSupport=false;
-            LeftFootOrientationAdaptator=true;
-
+                kbumpL=kbumpL+1;
+                LeftSensorActive=true;
+                LeftFootOrientationAdaptator=true;
             }
 
             if (footIndex!=0 && kbumpR==1){
-            kbumpR=kbumpR+1;
-
-            RightSupport=false;
-            RightFootOrientationAdaptator=true;
-
+                kbumpR=kbumpR+1;
+                RightSensorActive=true;
+                RightFootOrientationAdaptator=true;
             }
 
             MatrixXd output1=GetAccVelPos(C_cy_x_ar,localtiming-TDs,0,5);
@@ -927,6 +1263,7 @@ MatrixXd TaskSpaceOnline2::AnkleTrajectory(double time,int n, double localtiming
     }
 
     if(n==NStep+2){//end step of walk right foot moves
+
         if (LastDSIndex==true) {
             n=n-1;
 
@@ -939,12 +1276,11 @@ MatrixXd TaskSpaceOnline2::AnkleTrajectory(double time,int n, double localtiming
 
                 y_ar=currentRightFootY2;
                 y_al=currentLeftFootY2;
-
-
             }
 
         }
         else {
+            firstStep=true;
             if (localtiming<=(T_end_a_e-T_end_a_s)){
 
                 MatrixXd output1=GetAccVelPos(C_end_x_ar.row(0),localtiming,0,5);
@@ -1025,3 +1361,4 @@ MatrixXd TaskSpaceOnline2::GetAccVelPos(MatrixXd Coef,double time,double ti,int 
     Output<<X,V,A;
     return Output;
 }
+

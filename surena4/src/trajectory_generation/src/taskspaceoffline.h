@@ -1,6 +1,5 @@
-#ifndef TASKSPACEOFFLINE_H
-#define TASKSPACEOFFLINE_H
-
+#ifndef TASKSPACEONLINE2_H
+#define TASKSPACEONLINE2_H
 #include "Eigen/Dense"
 #include <qdebug.h>
 #include <qmath.h>
@@ -9,7 +8,6 @@
 #include <cstdlib>
 #include <link.h>
 #include "Eigen/eiquadprog.h"
-
 #include "Eigen/Core"
 #include "Eigen/Cholesky"
 #include "Eigen/LU"
@@ -19,24 +17,59 @@
 #include "MinimumJerkInterpolation.h"
 using namespace std;
 using namespace Eigen;
-
-class TaskSpaceOffline
+class TaskSpaceOnline2
 {  MinimumJerkInterpolation CoefOffline;
     double _lengthOfThigh;
     double _lengthOfShank;
-    double _lenghtOfAnkle;
+   // double _lenghtOfAnkle;
     double _lengthOfHip;
     double _pelvisLength;
     double _heelLength;
     double _toeLength;
+
 public:
-    TaskSpaceOffline();
-    bool toeOff;
+    double LeftHipRollModification;
+    double RightHipRollModification;
+    double _lenghtOfAnkle;
+    double OldPelvisZ;
+    double NewPlevisZ;
+    TaskSpaceOnline2();
     bool LeftSupport;
+     bool Leftmoves;
+     bool LeftSS;
+     bool Rightmoves;
+     bool RightSS;
     bool RightSupport;
     bool DoubleSupport;
+    bool RightSensorActive;
+    bool LeftSensorActive;
+
+    bool toeOff;
+
+   int footIndex;
+int kbumpL;
+int kbumpR;
+    double currentRightFootZ;
+    double currentRightFootX2;
+    double currentRightFootY2;
+
+    double currentLeftFootZ;
+    double currentLeftFootX2;
+    double currentLeftFootY2;
+
+    double oldLeftFootZ;
+    double oldLeftFootX2;
+    double oldLeftFootY2;
+
+    double oldRightFootZ;
+    double oldRightFootX2;
+    double oldRightFootY2;
+
     bool HipRollModification;
     double HeelLandingAnglePitch;
+
+    bool RightFootOrientationAdaptator;
+    bool LeftFootOrientationAdaptator;
     double ToeOffAnglePitch;
     double TStart;
     double TEnd;
@@ -47,6 +80,11 @@ public:
     double TSS;
     double YOffsetOfAnkletrajectory;
 
+    double RollTimeSS;
+     double RollTimeDs;
+
+     bool firstStep;
+
     double xa_st_m;
     double er;
     double TMinPelvisZ; // The time that pelvis reaches its minimum distance in z direction
@@ -54,7 +92,7 @@ public:
     double TMaxAnkle;// The time that ankle reaches its maximum distance in z direction
     double TMaxPelvisZ; // The time that pelvis reaches its maximum distance in z direction
     double TMaxPelvisY;
-    double Tc;
+    int Tc;
     double NStride;
     double MotionTime;
     double Rm;
@@ -67,6 +105,12 @@ public:
     double Sc;
     double Rse;
     double StepLength;
+    int StepNumber;
+    double NStep;
+    double localTime;
+    double localTime1;
+    double localTiming;
+    int localtimingInteger;
     double Xs;// Distance of pelvis and front ankle in DSP
     double DesiredVelocity;
     double Delta;
@@ -171,6 +215,10 @@ double _timeStep;
     QVector<double> LeftFootXAcceleration;
     QVector<double> LeftFootYAcceleration;
     QVector<double> LeftFootZAcceleration;
+
+    double T_end_p_sx_rel;
+
+
     MatrixXd Cx;
     MatrixXd Cz;
     MatrixXd Cx_st;
@@ -189,10 +237,10 @@ double _timeStep;
     MatrixXd C_st_z_al;
     MatrixXd C_cy_x_al;
     MatrixXd C_cy_z_ar;
-     MatrixXd C_cy_y_ar;
-     MatrixXd C_cy_y_al;
-     MatrixXd C_st_y_al;
-     MatrixXd C_end_y_ar;
+    MatrixXd C_cy_y_ar;
+    MatrixXd C_cy_y_al;
+    MatrixXd C_st_y_al;
+    MatrixXd C_end_y_ar;
     MatrixXd C_end_z_ar;
     MatrixXd C_end_x_ar;
     MatrixXd C_cy_x_ar;
@@ -223,15 +271,21 @@ double _timeStep;
     MatrixXd Cz_st_a;
     MatrixXd Cz_end_b;
     MatrixXd Cz_end_a;
+    MatrixXd Cz_mod_p;
+    MatrixXd Cz_mod_st_p;
 
 
     void SetParameters();
-    MatrixXd AnkleTrajectory(double time);
+    MatrixXd AnkleTrajectory(double time, int n, double localtiming, bool RFT_state, bool LFT_state, bool LastDSIndex);
     MatrixXd GetAccVelPos(MatrixXd Coef, double time, double ti, int PolynomialOrder);
     void CoeffArrayAnkle();
     void CoeffArrayPelvis();
-    MatrixXd PelvisTrajectory(double time);
+    MatrixXd PelvisTrajectory(double time, int n, double localtiming, bool LastDSIndex);
     void CoeffArrayFootAngle();
+    MatrixXd ModificationOfPelvisHeight(double time, int n, double localtiming, bool RFT_state, bool LFT_state, bool LastDSIndex);
+    void CoeffArrayPelvisZMod();
+    MatrixXd RollAngleModification(double time, int n, double localtiming, bool LastDSIndex);
 };
 
-#endif // TASKSPACEOFFLINE_H
+#endif // TASKSPACEONLINE_H
+
